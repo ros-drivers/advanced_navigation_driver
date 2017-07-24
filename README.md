@@ -25,9 +25,8 @@ This example has been developed and tested using Ubuntu Linux v16.04 LTS and ROS
 If you require any assistance using this code, please email support@advancednavigation.com.au.
 
 
-/*********************************************/
 Build Instructions
-/*********************************************/
+
 ROS driver build instructions from: http://www.clearpathrobotics.com/assets/guides/ros/Creating%20publisher.html#creating-a-workspace-package
 
 1. Open a new Terminal window and type: "mkdir ~/ros[enter]".
@@ -44,15 +43,15 @@ ROS driver build instructions from: http://www.clearpathrobotics.com/assets/guid
 10. Type: "catkin_make[enter]".
 
 
-/*********************************************/
+
 Device Configuration
-/*********************************************/
+
 To use this example code, your Advanced Navigation device should be configured to output anpp packets #20 and #27.
 
 
-/*********************************************/
+
 Run Instructions
-/*********************************************/
+
 1. Open a new Terminal window and type: "sudo adduser user_name dialout[enter]". This should only need to be done once.
 2. Plug in the USB to RS232 adapter cable that is connected to the Advanced Navigation device.
 3. In the Terminal window type: "dmesg | grep tty [enter]" to confirm the name of the com port (should be something like "ttyUSB0").
@@ -76,9 +75,9 @@ Run Instructions
 14. You need to subscribe to these topics in your code to get access to the data in the messages.
 
 
-/*********************************************/
+
 Published Topics
-/*********************************************/
+
 an_device/NavSatFix
 an_device/Twist
 an_device/Imu
@@ -86,9 +85,9 @@ an_device/SystemStatus
 an_device/FilterStatus
 
 
-/*********************************************/
+
 Published Messages: an_device/NavSatFix
-/*********************************************/
+
 sensor_msgs / NavSatFix / Header / Stamp / Sec		// Packet 20, Field 3, Unix time
 sensor_msgs / NavSatFix / Header / Stamp / Nsec 	// Packet 20, Field 4, Unix time microseconds * 1000
 sensor_msgs / NavSatFix / Header / Frame_ID	 		// Fixed to 0
@@ -101,9 +100,9 @@ sensor_msgs / NavSatFix / Position_Covariance		// Packet 20, Fields 21, 22, 23, 
 sensor_msgs / NavSatFix / Position_Covariance_Type	// Fixed to 2 (diagonal known)
 
 
-/*********************************************/
+
 Published Messages: an_device/Twist
-/*********************************************/
+
 geometry_msgs / Twist / Linear / X					// Packet 20, Field 8, Metres per second
 geometry_msgs / Twist / Linear / Y					// Packet 20, Field 9, Metres per second
 geometry_msgs / Twist / Linear / Z					// Packet 20, Field 10, Metres per second
@@ -112,9 +111,9 @@ geometry_msgs / Twist / Angular / Y					// Packet 20, Field 19, Radians per seco
 geometry_msgs / Twist / Angular / Z					// Packet 20, Field 20, Radians per second
 
 
-/*********************************************/
+
 Published Messages: an_device/Imu
-/*********************************************/
+
 sensor_msgs / Imu / Orientation / X					// Packet 20, Fields 15, 16, 17, Converted from radians to quaternions
 sensor_msgs / Imu / Orientation / Y					// Packet 20, Fields 15, 16, 17, Converted from radians to quaternions
 sensor_msgs / Imu / Orientation / Z					// Packet 20, Fields 15, 16, 17, Converted from radians to quaternions
@@ -128,24 +127,24 @@ sensor_msgs / Imu / Linear_Acceleration / Y			// Packet 20, Field 12, Metres per
 sensor_msgs / Imu / Linear_Acceleration / Z			// Packet 20, Field 13, Metres per second per second
 
 
-/**********************************************/
+
 Published Messages: an_device/SystemStatus
-/**********************************************/
+
 diagnostic_msgs / Diagnostic_Status / Name			// Fixed to "System Status"
 diagnostic_msgs / Diagnostic_Status / Level			// Packet 20, Field 1, Set to 0 (OK) or 2 (ERROR)
 diagnostic_msgs / Diagnostic_Status / Message		// Packet 20, Field 1, Varies
 
 
-/**********************************************/
+
 Published Messages: an_device/FilterStatus
-/**********************************************/
+
 diagnostic_msgs / Diagnostic_Status / Name			// Fixed to "Filter Status"
 diagnostic_msgs / Diagnostic_Status / Level			// Packet 20, Field 2, Set to 0 (OK) or 1 (WARN)
 diagnostic_msgs / Diagnostic_Status / Message		// Packet 20, Field 2, Varies
 
 
-/**********************************************/
+
 Messages Not Published
-/**********************************************/
+
 sensor_msgs / Imu / Angular_Velocity_Covariance 
 sensor_msgs / Imu / Linear_Acceleration_Covariance
