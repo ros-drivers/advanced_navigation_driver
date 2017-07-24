@@ -1,18 +1,18 @@
 # Advanced_Navigation_driver
 Driver for the range of INS systems from Advanced Navigation
 
+
+
 /*********************************************/
-/*            Advanced Navigation            */
-/*                ROS Driver                 */
-/*    Packet to Published Message Example    */
-/*                                           */
-/*    Copyright 2017, Advanced Navigation    */
-/*                                           */
+Advanced Navigation
+ROS Driver
+Packet to Published Message Example
+Copyright 2017, Advanced Navigation
 /*********************************************/
 
 
 /*********************************************/
-/*              Introduction                 */
+Introduction
 /*********************************************/
 This is an example using the Advanced Navigation Spatial SDK to create a ROS driver that reads and decodes the anpp packets (in this case packet #20 and packet #27) and publishes the information as ROS topics / messages. 
 
@@ -26,7 +26,7 @@ If you require any assistance using this code, please email support@advancednavi
 
 
 /*********************************************/
-/*            Build Instructions             */
+Build Instructions
 /*********************************************/
 ROS driver build instructions from: http://www.clearpathrobotics.com/assets/guides/ros/Creating%20publisher.html#creating-a-workspace-package
 
@@ -45,13 +45,13 @@ ROS driver build instructions from: http://www.clearpathrobotics.com/assets/guid
 
 
 /*********************************************/
-/*           Device Configuration            */
+Device Configuration
 /*********************************************/
 To use this example code, your Advanced Navigation device should be configured to output anpp packets #20 and #27.
 
 
 /*********************************************/
-/*             Run Instructions              */
+Run Instructions
 /*********************************************/
 1. Open a new Terminal window and type: "sudo adduser user_name dialout[enter]". This should only need to be done once.
 2. Plug in the USB to RS232 adapter cable that is connected to the Advanced Navigation device.
@@ -77,7 +77,7 @@ To use this example code, your Advanced Navigation device should be configured t
 
 
 /*********************************************/
-/*             Published Topics              */
+Published Topics
 /*********************************************/
 an_device/NavSatFix
 an_device/Twist
@@ -87,7 +87,7 @@ an_device/FilterStatus
 
 
 /*********************************************/
-/* Published Messages: an_device/NavSatFix   */
+Published Messages: an_device/NavSatFix
 /*********************************************/
 sensor_msgs / NavSatFix / Header / Stamp / Sec		// Packet 20, Field 3, Unix time
 sensor_msgs / NavSatFix / Header / Stamp / Nsec 	// Packet 20, Field 4, Unix time microseconds * 1000
@@ -102,7 +102,7 @@ sensor_msgs / NavSatFix / Position_Covariance_Type	// Fixed to 2 (diagonal known
 
 
 /*********************************************/
-/*   Published Messages: an_device/Twist     */
+Published Messages: an_device/Twist
 /*********************************************/
 geometry_msgs / Twist / Linear / X					// Packet 20, Field 8, Metres per second
 geometry_msgs / Twist / Linear / Y					// Packet 20, Field 9, Metres per second
@@ -113,7 +113,7 @@ geometry_msgs / Twist / Angular / Z					// Packet 20, Field 20, Radians per seco
 
 
 /*********************************************/
-/*    Published Messages: an_device/Imu      */
+Published Messages: an_device/Imu
 /*********************************************/
 sensor_msgs / Imu / Orientation / X					// Packet 20, Fields 15, 16, 17, Converted from radians to quaternions
 sensor_msgs / Imu / Orientation / Y					// Packet 20, Fields 15, 16, 17, Converted from radians to quaternions
@@ -129,7 +129,7 @@ sensor_msgs / Imu / Linear_Acceleration / Z			// Packet 20, Field 13, Metres per
 
 
 /**********************************************/
-/* Published Messages: an_device/SystemStatus */
+Published Messages: an_device/SystemStatus
 /**********************************************/
 diagnostic_msgs / Diagnostic_Status / Name			// Fixed to "System Status"
 diagnostic_msgs / Diagnostic_Status / Level			// Packet 20, Field 1, Set to 0 (OK) or 2 (ERROR)
@@ -137,7 +137,7 @@ diagnostic_msgs / Diagnostic_Status / Message		// Packet 20, Field 1, Varies
 
 
 /**********************************************/
-/* Published Messages: an_device/FilterStatus */
+Published Messages: an_device/FilterStatus
 /**********************************************/
 diagnostic_msgs / Diagnostic_Status / Name			// Fixed to "Filter Status"
 diagnostic_msgs / Diagnostic_Status / Level			// Packet 20, Field 2, Set to 0 (OK) or 1 (WARN)
@@ -145,7 +145,7 @@ diagnostic_msgs / Diagnostic_Status / Message		// Packet 20, Field 2, Varies
 
 
 /**********************************************/
-/*          Messages Not Published            */
+Messages Not Published
 /**********************************************/
 sensor_msgs / Imu / Angular_Velocity_Covariance 
 sensor_msgs / Imu / Linear_Acceleration_Covariance
