@@ -34,7 +34,7 @@ ROS driver build instructions from: http://www.clearpathrobotics.com/assets/guid
 5. Type: "catkin_create_pkg an_driver roscpp std_msgs[enter]".
 6. Copy the supplied "src" directory and the "package.xml" file into the "~/ros/src/an_driver" directory. It should be OK to overwrite the existing "package.xml" file if you are following these instructions explicitly. If installing into your own pre-existing catkin workspace it may be necessary to manually merge the contents of these files.
 7. Modify the "package.xml" file in ~/ros/src/an_driver directory as required.
-8. Modify the CMakeLists.txt file in the "~/ros/src/an_driver" directory by adding two lines at the end (you may need to modify the paths to suit your installation):
+8. Copy the supplied "CMakeLists.txt"file into the "~/ros/src/an_driver" directory, or modify the exisitng CMakeLists.txt file in the "~/ros/src/an_driver" directory by adding two lines at the end (you may need to modify the paths to suit your installation):
    add_executable(an_driver ~/ros/src/an_driver/src/an_driver.cpp ~/ros/src/an_driver/src/spatial_packets.c ~/ros/src/an_driver/src/an_packet_protocol ~/ros/src/an_driver/src/rs232/rs232.c)
    target_link_libraries(an_driver ${catkin_LIBRARIES})
 9. Type: "cd ~/ros[enter]".
