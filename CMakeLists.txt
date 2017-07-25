@@ -200,5 +200,5 @@ include_directories(
 #########################
 ## Advanced Navigation ##
 #########################
-add_executable(an_driver ~/ros/src/an_driver/src/an_driver.cpp ~/ros/src/an_driver/src/spatial_packets.c ~/ros/src/an_driver/src/an_packet_protocol.c ~/ros/src/an_driver/src/rs232/rs232.c)
+add_executable(an_driver src/an_driver.cpp src/spatial_packets.c src/an_packet_protocol.c src/rs232/rs232.c)
 target_link_libraries(an_driver ${catkin_LIBRARIES})
