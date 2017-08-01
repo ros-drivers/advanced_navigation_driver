@@ -35,7 +35,7 @@ ROS driver build instructions from: http://www.clearpathrobotics.com/assets/guid
 6. Copy the supplied "src" directory and the "package.xml" file into the "~/ros/src/an_driver" directory. It should be OK to overwrite the existing "package.xml" file if you are following these instructions explicitly. If installing into your own pre-existing catkin workspace it may be necessary to manually merge the contents of these files.
 7. Modify the "package.xml" file in ~/ros/src/an_driver directory as required.
 8. Copy the supplied "CMakeLists.txt"file into the "~/ros/src/an_driver" directory, or modify the exisitng CMakeLists.txt file in the "~/ros/src/an_driver" directory by adding two lines at the end (you may need to modify the paths to suit your installation):
-   add_executable(an_driver ~/ros/src/an_driver/src/an_driver.cpp ~/ros/src/an_driver/src/spatial_packets.c ~/ros/src/an_driver/src/an_packet_protocol ~/ros/src/an_driver/src/rs232/rs232.c)
+   add_executable(an_driver src/an_driver.cpp src/spatial_packets.c src/an_packet_protocol src/rs232/rs232.c)
    target_link_libraries(an_driver ${catkin_LIBRARIES})
 9. Type: "cd ~/ros[enter]".
 10. Type: "catkin_make[enter]".
@@ -55,7 +55,7 @@ To use this example code, your Advanced Navigation device should be configured t
 3. In the Terminal window type: "dmesg | grep tty [enter]" to confirm the name of the com port (should be something like "ttyUSB0").
 4. Type: "roscore[enter]" to start ROS Master.
 5. Open a new Terminal window and type: "source ~/ros/devel/setup.bash[enter]".
-6. Using the name of your specific com port, type: "rosrun an_driver an_driver ttyUYSB0 115200[enter]". 
+6. Using the name of your specific com port, type: "rosrun an_driver an_driver /dev/ttyUSB0 115200[enter]". 
 7. Open a new Terminal window and type: "rosnode list[enter]" to list the available nodes. You should see these listed:
    /an_device_node
    /rosout
