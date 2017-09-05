@@ -15,5 +15,5 @@ This example has been developed and tested using Ubuntu Linux v16.04 LTS and ROS
 
 If you require any assistance using this code, please email support@advancednavigation.com.au.
 
-Installation, build, device configuration, and execution instructions can be found in the file "ROS AN Driver Notes.txt". 
+Installation, build, device configuration, and execution instructions can be found in the file "Advanced Navigation ROS Driver Notes.txt". 
 
