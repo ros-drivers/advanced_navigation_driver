@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package>
-  <name>an_driver</name>
+  <name>advanced_navigation_driver</name>
   <version>1.0.0</version>
   <description>The Advanced Navigation driver package for ROS</description>
 
