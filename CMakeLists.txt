@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(an_driver)
+project(advanced_navigation_driver)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 add_compile_options(-std=c++11)
@@ -200,5 +200,5 @@ include_directories(
 #########################
 ## Advanced Navigation ##
 #########################
-add_executable(an_driver src/an_driver.cpp src/spatial_packets.c src/an_packet_protocol.c src/rs232/rs232.c)
-target_link_libraries(an_driver ${catkin_LIBRARIES})
+add_executable(advanced_navigation_driver src/an_driver.cpp src/spatial_packets.c src/an_packet_protocol.c src/rs232/rs232.c)
+target_link_libraries(advanced_navigation_driver ${catkin_LIBRARIES})
