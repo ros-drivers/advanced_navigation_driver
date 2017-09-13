@@ -1,4 +1,4 @@
-# Advanced_Navigation_driver
+# advanced_navigation_driver
 Driver for the range of INS systems from Advanced Navigation
 
 Packet to Published Message Example
