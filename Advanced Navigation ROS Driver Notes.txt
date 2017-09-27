@@ -15,8 +15,6 @@ This is an example using the Advanced Navigation Spatial SDK to create a ROS dri
 
 It should work on all Advanced Navigation INS devices.
 
-The code has been written to be easy to understand, so no optimisations have been made.  It should be relatively easy to extend this code to obtain other infomation required from the relevant anpp packet. 
-
 This example has been developed and tested using Ubuntu Linux v16.04 LTS and ROS Lunar. Installation instructions for ROS can be found here: http://wiki.ros.org/lunar/Installation/Ubuntu.
 
 If you require any assistance using this code, please email support@advancednavigation.com.au.
