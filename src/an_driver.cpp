@@ -26,12 +26,19 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+/*
+2018.02.09  Kyler Laird
+added RTCM handling, configuration parameters
+*/
+
 #include <ros/ros.h>
+#include <ros/serialization.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <math.h>
 #include <unistd.h>
+#include <string.h>
 
 #include "rs232/rs232.h"
 #include "an_packet_protocol.h"
@@ -42,33 +49,96 @@
 #include <sensor_msgs/Imu.h>
 #include <geometry_msgs/Twist.h>
 #include <diagnostic_msgs/DiagnosticArray.h>
+#include <std_msgs/String.h>
 
 #define RADIANS_TO_DEGREES (180.0/M_PI)
 
+
+int an_packet_transmit(an_packet_t *an_packet)
+{
+        an_packet_encode(an_packet);
+	return SendBuf(an_packet_pointer(an_packet), an_packet_size(an_packet));
+}
+
+void set_filter_options()
+{
+        an_packet_t *an_packet;
+        filter_options_packet_t filter_options_packet;
+
+        /* initialise the structure by setting all the fields to zero */
+        memset(&filter_options_packet, 0, sizeof(filter_options_packet_t));
+
+        filter_options_packet.permanent = TRUE;
+        filter_options_packet.vehicle_type = vehicle_type_car;
+        filter_options_packet.internal_gnss_enabled = TRUE;
+        filter_options_packet.atmospheric_altitude_enabled = TRUE;
+        filter_options_packet.velocity_heading_enabled = TRUE;
+        filter_options_packet.reversing_detection_enabled = TRUE;
+        filter_options_packet.motion_analysis_enabled = TRUE;
+
+        an_packet = encode_filter_options_packet(&filter_options_packet);
+
+        an_packet_transmit(an_packet);
+
+        an_packet_free(&an_packet);
+}
+
+void set_filter_options_x()
+{
+	//an_packet_t *an_packet = an_packet_allocate(17, 186);
+
+	an_packet_t *an_packet = an_packet_allocate(4, 55);
+	memcpy(&an_packet->data[0], "test", 5 * sizeof(uint8_t));
+        an_packet_transmit(an_packet);
+        an_packet_free(&an_packet);
+}
+
+void handle_rtcm(const std_msgs::String::ConstPtr& msg) {
+	const char *rtcm_data;
+	uint32_t string_length = msg->data.length();
+
+	// ROS_INFO("RTCM: %d bytes",  string_length);
+	
+	an_packet_t *an_packet = an_packet_allocate(string_length, packet_id_rtcm_corrections);
+	memcpy(&an_packet->data[0], &msg->data[0], string_length);
+	an_packet_transmit(an_packet);
+	an_packet_free(&an_packet);
+}
+
 int main(int argc, char *argv[]) {
 	// Set up ROS node //
-	ros::init(argc, argv, "an_device_node");
-	ros::NodeHandle nh;
-	
-	if(argc != 3)
+	ros::init(argc, argv, "an_device");
+	ros::NodeHandle nh("~");
+
+	// Set up the COM port
+	std::string com_port_s;
+	nh.param<std::string>("port", com_port_s, "/dev/ttyS0");
+	char *com_port = (char *)com_port_s.c_str();
+
+	int baud_rate;
+	nh.param<int>("baud", baud_rate, 115200);
+
+	if (OpenComport(com_port, baud_rate))
 	{
-		printf("\nCannot start - not enough commnand line arguments. \nUsage: rosrun an_driver an_driver {port} {baud rate}. \nTry: rosrun an_driver an_driver /dev/ttyUSB0 115200\n");
-		printf("Number of command line arguments detected: %i\n",argc);
+		ROS_INFO("Could not open serial port %s at %d baud.", com_port, baud_rate);
 		exit(EXIT_FAILURE);
 	}
-	
-	printf("\nYour Advanced Navigation ROS driver is currently running\nClose the Terminal window when done.\n");
-	
-	// Set up the COM port
-	char* com_port = argv[1];
-	int baud_rate = atoi(argv[2]);
+	ROS_INFO("port:%s@%d", com_port, baud_rate);
+
+	// If an RTCM topic is provided, subscribe to it and pass corrections to device.
+	std::string rtcm_topic;
+	ros::Subscriber rtcm_sub;
+	if (nh.getParam("rtcm", rtcm_topic)) {
+		rtcm_sub = nh.subscribe(rtcm_topic.c_str(), 1000, handle_rtcm);
+		ROS_INFO("listening for RTCM on %s", rtcm_topic.c_str());
+	}
 
 	// Initialise Publishers and Topics //
-	ros::Publisher nav_sat_fix_pub=nh.advertise<sensor_msgs::NavSatFix>("an_device/NavSatFix",10);
-	ros::Publisher twist_pub=nh.advertise<geometry_msgs::Twist>("an_device/Twist",10);
-	ros::Publisher imu_pub=nh.advertise<sensor_msgs::Imu>("an_device/Imu",10);
-	ros::Publisher system_status_pub=nh.advertise<diagnostic_msgs::DiagnosticStatus>("an_device/SystemStatus",10);
-	ros::Publisher filter_status_pub=nh.advertise<diagnostic_msgs::DiagnosticStatus>("an_device/FilterStatus",10);
+	ros::Publisher nav_sat_fix_pub=nh.advertise<sensor_msgs::NavSatFix>("NavSatFix",10);
+	ros::Publisher twist_pub=nh.advertise<geometry_msgs::Twist>("Twist",10);
+	ros::Publisher imu_pub=nh.advertise<sensor_msgs::Imu>("Imu",10);
+	ros::Publisher system_status_pub=nh.advertise<diagnostic_msgs::DiagnosticStatus>("SystemStatus",10);
+	ros::Publisher filter_status_pub=nh.advertise<diagnostic_msgs::DiagnosticStatus>("FilterStatus",10);
 
 	// Initialise messages
 	sensor_msgs::NavSatFix nav_sat_fix_msg;
@@ -126,16 +196,12 @@ int main(int argc, char *argv[]) {
 	quaternion_orientation_standard_deviation_packet_t quaternion_orientation_standard_deviation_packet;
 	int bytes_received;
 	
-	if (OpenComport(com_port, baud_rate))
-	{
-		printf("Could not open serial port: %s \n",com_port);
-		exit(EXIT_FAILURE);
-	}
 
 	an_decoder_initialise(&an_decoder);
 
+
 	// Loop continuously, polling for packets
-	while (1)
+	while (ros::ok())
 	{
 		if ((bytes_received = PollComport(an_decoder_pointer(&an_decoder), an_decoder_size(&an_decoder))) > 0)
 		{
@@ -145,6 +211,18 @@ int main(int argc, char *argv[]) {
 			// decode all the packets in the buffer //
 			while ((an_packet = an_packet_decode(&an_decoder)) != NULL)
 			{
+				// acknowledgement packet //
+				if (an_packet->id == 0) 
+				{
+					ROS_INFO("acknowledgement data: %d", an_packet->data[3]);
+				}
+
+				// receiver information packet //
+				if (an_packet->id == 69) 
+				{
+					ROS_INFO("receiver information: %d", an_packet->data[0]);
+				}
+
 				// system state packet //
 				if (an_packet->id == packet_id_system_state) 
 				{
@@ -153,21 +231,21 @@ int main(int argc, char *argv[]) {
 						// NavSatFix
 						nav_sat_fix_msg.header.stamp.sec=system_state_packet.unix_time_seconds;
 						nav_sat_fix_msg.header.stamp.nsec=system_state_packet.microseconds*1000;
-						if ((system_state_packet.filter_status.b.gnss_fix_type == 1) ||
-							(system_state_packet.filter_status.b.gnss_fix_type == 2))
+						if ((system_state_packet.filter_status.b.gnss_fix_type == 1) ||  // 2D
+							(system_state_packet.filter_status.b.gnss_fix_type == 2))   // 3D
 						{
-							nav_sat_fix_msg.status.status=0;
+							nav_sat_fix_msg.status.status=0; // no fix
 						}
-						else if ((system_state_packet.filter_status.b.gnss_fix_type == 3) ||
-							 (system_state_packet.filter_status.b.gnss_fix_type == 5))
+						else if ((system_state_packet.filter_status.b.gnss_fix_type == 3) ||  // SBAS
+							 (system_state_packet.filter_status.b.gnss_fix_type == 5))   // Omnistar/Starfire
 						{
-							nav_sat_fix_msg.status.status=1;
+							nav_sat_fix_msg.status.status=1; // SBAS
 						}
-						else if ((system_state_packet.filter_status.b.gnss_fix_type == 4) ||
-							 (system_state_packet.filter_status.b.gnss_fix_type == 6) ||
-							 (system_state_packet.filter_status.b.gnss_fix_type == 7))
+						else if ((system_state_packet.filter_status.b.gnss_fix_type == 4) ||  // differential
+							 (system_state_packet.filter_status.b.gnss_fix_type == 6) ||  // RTK float
+							 (system_state_packet.filter_status.b.gnss_fix_type == 7))    // RTK fixed
 						{
-							nav_sat_fix_msg.status.status=2;
+							nav_sat_fix_msg.status.status=2; // GBAS
 						}
 						else 
 						{
@@ -403,12 +481,7 @@ int main(int argc, char *argv[]) {
 				filter_status_pub.publish(filter_status_msg);
 			}
 		}
+		ros::spinOnce();
 	}
 
 }
-
-
-
-	
-	
-
