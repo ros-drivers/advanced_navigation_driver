@@ -22,6 +22,7 @@ Orientation now complies with REP 103.  East is zero degrees.  Degrees increment
 https://github.com/ros-drivers/advanced_navigation_driver/issues/3#issuecomment-372348146
 
 New parameters:
+
 	rtcm:  Specify a topic name.  Strings published to this topic will be passed to the device as RTCM corrections.
 
 	utm_zone:  Specify a UTM Zone number.  This will be used for calculating the transform.
