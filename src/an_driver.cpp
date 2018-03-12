@@ -54,6 +54,7 @@ added REP compliance, transform
 #include <geometry_msgs/Twist.h>
 #include <diagnostic_msgs/DiagnosticArray.h>
 #include <std_msgs/String.h>
+#include <nav_msgs/Odometry.h>
 
 #define RADIANS_TO_DEGREES (180.0/M_PI)
 
@@ -182,7 +183,7 @@ int main(int argc, char *argv[]) {
 	// If an RTCM topic is provided, subscribe to it and pass corrections to device.
 	std::string rtcm_topic;
 	ros::Subscriber rtcm_sub;
-	if (nh.getParam("rtcm", rtcm_topic)) {
+	if (nh.getParam("rtcm_topic", rtcm_topic)) {
 		rtcm_sub = nh.subscribe(rtcm_topic.c_str(), 1000, handle_rtcm);
 		ROS_INFO("listening for RTCM on %s", rtcm_topic.c_str());
 	}
@@ -199,12 +200,14 @@ int main(int argc, char *argv[]) {
 
 	}
 
+
 	// Initialise Publishers and Topics //
 	ros::Publisher nav_sat_fix_pub=nh.advertise<sensor_msgs::NavSatFix>("NavSatFix",10);
 	ros::Publisher twist_pub=nh.advertise<geometry_msgs::Twist>("Twist",10);
 	ros::Publisher imu_pub=nh.advertise<sensor_msgs::Imu>("Imu",10);
 	ros::Publisher system_status_pub=nh.advertise<diagnostic_msgs::DiagnosticStatus>("SystemStatus",10);
 	ros::Publisher filter_status_pub=nh.advertise<diagnostic_msgs::DiagnosticStatus>("FilterStatus",10);
+	ros::Publisher odom_pub = nh.advertise<nav_msgs::Odometry>("odom", 50);
 
 	// Initialise messages
 	sensor_msgs::NavSatFix nav_sat_fix_msg;
@@ -354,7 +357,7 @@ int main(int argc, char *argv[]) {
 						imu_msg.linear_acceleration.x=system_state_packet.body_acceleration[0];
 						imu_msg.linear_acceleration.y=system_state_packet.body_acceleration[1];
 						imu_msg.linear_acceleration.z=system_state_packet.body_acceleration[2];
-						
+
 						// transform
 						if (utm_zone) {
 							static tf::TransformBroadcaster transform_br;
@@ -386,7 +389,44 @@ int main(int argc, char *argv[]) {
 								tf_name
 							));
 							//printf("time: %d\n", system_state_packet.microseconds);
-						}	
+
+							nav_msgs::Odometry odom;
+							odom.header.stamp.sec=system_state_packet.unix_time_seconds;
+							odom.header.stamp.nsec=system_state_packet.microseconds*1000;
+
+							odom.header.frame_id= "world"; // fix this!
+							odom.child_frame_id = "ins";  // fix this!
+
+							//set the position
+							odom.pose.pose.position.x = E;
+							odom.pose.pose.position.y = N;
+							odom.pose.pose.position.z = system_state_packet.height;
+							odom.pose.pose.orientation.x = orientation[0];
+							odom.pose.pose.orientation.y = orientation[1];
+							odom.pose.pose.orientation.z = orientation[2];
+							odom.pose.pose.orientation.w = orientation[3];
+
+							// Is this correct???
+							odom.pose.covariance={
+								pow(system_state_packet.standard_deviation[1],2), 0.0, 0.0,
+								0.0, pow(system_state_packet.standard_deviation[0],2), 0.0,
+								0.0, 0.0, pow(system_state_packet.standard_deviation[2],2)
+							};
+
+							//set the velocity
+							odom.twist.twist.linear.x = system_state_packet.velocity[0];
+							odom.twist.twist.linear.y = system_state_packet.velocity[1];
+							odom.twist.twist.linear.z = system_state_packet.velocity[2];
+
+							// Set angular velocity.
+							odom.twist.twist.angular.x = system_state_packet.angular_velocity[0];
+							odom.twist.twist.angular.y = system_state_packet.angular_velocity[1];
+							odom.twist.twist.angular.z = system_state_packet.angular_velocity[2];
+
+							//publish the message
+							odom_pub.publish(odom);
+
+						}
 
 						// System Status	
 						system_status_msg.message = "";
