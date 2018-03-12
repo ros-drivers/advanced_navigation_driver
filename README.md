@@ -23,10 +23,12 @@ https://github.com/ros-drivers/advanced_navigation_driver/issues/3#issuecomment-
 
 New parameters:
 
-	rtcm:  Specify a topic name.  Strings published to this topic will be passed to the device as RTCM corrections.
+	rtcm_topic:  Specify a topic name.  Strings published to this topic will be passed to the device as RTCM corrections.
 
 	utm_zone:  Specify a UTM Zone number.  This will be used for calculating the transform.
 
 	tf_name:  Specify the name of the transform to broadcast.
+
+If you specify a utm_zone, Odometry messages will be published to "odom".
 
 These changes are all tentative and need testing.
