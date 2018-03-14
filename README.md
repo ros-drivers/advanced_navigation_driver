@@ -31,4 +31,6 @@ New parameters:
 
 If you specify a utm_zone, Odometry messages will be published to "odom".
 
+Under Linux, serial port reads are blocking.  This reduces CPU usage from 100% to 5% (for 20 Hz on an i5).
+
 These changes are all tentative and need testing.
