@@ -180,34 +180,27 @@ int main(int argc, char *argv[]) {
 	}
 	ROS_INFO("port:%s@%d", com_port, baud_rate);
 
-	// If an RTCM topic is provided, subscribe to it and pass corrections to device.
-	std::string rtcm_topic;
-	ros::Subscriber rtcm_sub;
-	if (nh.getParam("rtcm_topic", rtcm_topic)) {
-		rtcm_sub = nh.subscribe(rtcm_topic.c_str(), 1000, handle_rtcm);
-		ROS_INFO("listening for RTCM on %s", rtcm_topic.c_str());
-	}
-
+	
 	// If a UTM Zone is provided, publish transforms.
 	// The zone is static to avoid problems due to changing when near a Zone boundary.
 	int utm_zone;
-	std::string tf_name;
+	std::string tf_name = nh.getNamespace();
 	tf::Transform transform;
 	if (nh.getParam("utm_zone", utm_zone)) {
 		LongOriginRad = (utm_zone*6 - 183) * deg2rad;
-		nh.param<std::string>("tf_name", tf_name, "an_device");  // The default should be chosen better.
 		ROS_INFO("using UTM Zone %d to publish transform %s", utm_zone, tf_name.c_str());
 
 	}
 
 
-	// Initialise Publishers and Topics //
+	// Initialise Publishers, and Subscribers //
 	ros::Publisher nav_sat_fix_pub=nh.advertise<sensor_msgs::NavSatFix>("NavSatFix",10);
 	ros::Publisher twist_pub=nh.advertise<geometry_msgs::Twist>("Twist",10);
 	ros::Publisher imu_pub=nh.advertise<sensor_msgs::Imu>("Imu",10);
 	ros::Publisher system_status_pub=nh.advertise<diagnostic_msgs::DiagnosticStatus>("SystemStatus",10);
 	ros::Publisher filter_status_pub=nh.advertise<diagnostic_msgs::DiagnosticStatus>("FilterStatus",10);
 	ros::Publisher odom_pub = nh.advertise<nav_msgs::Odometry>("odom", 50);
+	ros::Subscriber rtcm_sub = nh.subscribe("rtcm", 1000, handle_rtcm);
 
 	// Initialise messages
 	sensor_msgs::NavSatFix nav_sat_fix_msg;
@@ -372,15 +365,12 @@ int main(int argc, char *argv[]) {
 
 							transform.setOrigin(tf::Vector3(
 								E, N, system_state_packet.height
-								// 0, 0, 0  // move to origin for testing
-								// E - 483713.0, N - 4526330.0, 0  // move to origin for testing
 							));
 
 							transform.setRotation(orientation);
 
 							transform_br.sendTransform(tf::StampedTransform(
 								transform,
-								//ros::Time::now(),
 								ros::Time(
 									system_state_packet.unix_time_seconds,
 									system_state_packet.microseconds*1000
@@ -388,7 +378,6 @@ int main(int argc, char *argv[]) {
 								"world",  // Is it reasonable to hardcode this?
 								tf_name
 							));
-							//printf("time: %d\n", system_state_packet.microseconds);
 
 							nav_msgs::Odometry odom;
 							odom.header.stamp.sec=system_state_packet.unix_time_seconds;
