@@ -49,32 +49,40 @@ int main(int argc, char *argv[]) {
 	// Set up ROS node //
 	ros::init(argc, argv, "an_device_node");
 	ros::NodeHandle nh;
-	
-	if(argc != 3)
-	{
-		printf("\nCannot start - not enough commnand line arguments. \nUsage: rosrun an_driver an_driver {port} {baud rate}. \nTry: rosrun an_driver an_driver /dev/ttyUSB0 115200\n");
-		printf("Number of command line arguments detected: %i\n",argc);
-		exit(EXIT_FAILURE);
-	}
-	
-	printf("\nYour Advanced Navigation ROS driver is currently running\nClose the Terminal window when done.\n");
-	
+	ros::NodeHandle pnh("~");
+
 	// Set up the COM port
-	char* com_port = argv[1];
-	int baud_rate = atoi(argv[2]);
+	std::string com_port;
+	int baud_rate;
+	std::string imu_frame_id;
+	std::string nav_sat_frame_id;
+	std::string topic_prefix;
+
+	if (argc >= 3) {
+		com_port = std::string(argv[1]);
+		baud_rate = atoi(argv[2]);
+	}
+	else {
+		pnh.param("port", com_port, std::string("/dev/ttyUSB0"));
+		pnh.param("baud_rate", baud_rate, 115200);
+	}
+
+	pnh.param("imu_frame_id", imu_frame_id, std::string("imu"));
+	pnh.param("nav_sat_frame_id", nav_sat_frame_id, std::string("gps"));
+	pnh.param("topic_prefix", topic_prefix, std::string("an_device"));
 
 	// Initialise Publishers and Topics //
-	ros::Publisher nav_sat_fix_pub=nh.advertise<sensor_msgs::NavSatFix>("an_device/NavSatFix",10);
-	ros::Publisher twist_pub=nh.advertise<geometry_msgs::Twist>("an_device/Twist",10);
-	ros::Publisher imu_pub=nh.advertise<sensor_msgs::Imu>("an_device/Imu",10);
-	ros::Publisher system_status_pub=nh.advertise<diagnostic_msgs::DiagnosticStatus>("an_device/SystemStatus",10);
-	ros::Publisher filter_status_pub=nh.advertise<diagnostic_msgs::DiagnosticStatus>("an_device/FilterStatus",10);
+	ros::Publisher nav_sat_fix_pub=nh.advertise<sensor_msgs::NavSatFix>(topic_prefix + "/NavSatFix",10);
+	ros::Publisher twist_pub=nh.advertise<geometry_msgs::Twist>(topic_prefix + "/Twist",10);
+	ros::Publisher imu_pub=nh.advertise<sensor_msgs::Imu>(topic_prefix + "/Imu",10);
+	ros::Publisher system_status_pub=nh.advertise<diagnostic_msgs::DiagnosticStatus>(topic_prefix + "/SystemStatus",10);
+	ros::Publisher filter_status_pub=nh.advertise<diagnostic_msgs::DiagnosticStatus>(topic_prefix + "/FilterStatus",10);
 
 	// Initialise messages
 	sensor_msgs::NavSatFix nav_sat_fix_msg;
 	nav_sat_fix_msg.header.stamp.sec=0;
 	nav_sat_fix_msg.header.stamp.nsec=0;
-	nav_sat_fix_msg.header.frame_id='0'; // fixed
+	nav_sat_fix_msg.header.frame_id='0';
 	nav_sat_fix_msg.status.status=0;
 	nav_sat_fix_msg.status.service=1; // fixed to GPS
 	nav_sat_fix_msg.latitude=0.0;
@@ -94,7 +102,7 @@ int main(int argc, char *argv[]) {
 	sensor_msgs::Imu imu_msg;
 	imu_msg.header.stamp.sec=0;
 	imu_msg.header.stamp.nsec=0;
-	imu_msg.header.frame_id='0'; // fixed
+	imu_msg.header.frame_id='0';
 	imu_msg.orientation.x=0.0;
 	imu_msg.orientation.y=0.0;
 	imu_msg.orientation.z=0.0;
@@ -126,9 +134,9 @@ int main(int argc, char *argv[]) {
 	quaternion_orientation_standard_deviation_packet_t quaternion_orientation_standard_deviation_packet;
 	int bytes_received;
 	
-	if (OpenComport(com_port, baud_rate))
+	if (OpenComport(const_cast<char*>(com_port.c_str()), baud_rate))
 	{
-		printf("Could not open serial port: %s \n",com_port);
+		printf("Could not open serial port: %s \n",com_port.c_str());
 		exit(EXIT_FAILURE);
 	}
 
@@ -153,6 +161,7 @@ int main(int argc, char *argv[]) {
 						// NavSatFix
 						nav_sat_fix_msg.header.stamp.sec=system_state_packet.unix_time_seconds;
 						nav_sat_fix_msg.header.stamp.nsec=system_state_packet.microseconds*1000;
+						nav_sat_fix_msg.header.frame_id=nav_sat_frame_id;
 						if ((system_state_packet.filter_status.b.gnss_fix_type == 1) ||
 							(system_state_packet.filter_status.b.gnss_fix_type == 2))
 						{
@@ -191,6 +200,7 @@ int main(int argc, char *argv[]) {
 						// IMU
 						imu_msg.header.stamp.sec=system_state_packet.unix_time_seconds;
 						imu_msg.header.stamp.nsec=system_state_packet.microseconds*1000;
+						imu_msg.header.frame_id=imu_frame_id;
 						// Convert roll, pitch, yaw from radians to quaternion format //
 						float phi = system_state_packet.orientation[0] / 2.0f;
 						float theta = system_state_packet.orientation[1] / 2.0f;
