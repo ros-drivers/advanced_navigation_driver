@@ -19,7 +19,7 @@
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
  * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE 
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
  * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
@@ -49,32 +49,40 @@ int main(int argc, char *argv[]) {
 	// Set up ROS node //
 	ros::init(argc, argv, "an_device_node");
 	ros::NodeHandle nh;
-	
-	if(argc != 3)
-	{
-		printf("\nCannot start - not enough commnand line arguments. \nUsage: rosrun an_driver an_driver {port} {baud rate}. \nTry: rosrun an_driver an_driver /dev/ttyUSB0 115200\n");
-		printf("Number of command line arguments detected: %i\n",argc);
-		exit(EXIT_FAILURE);
-	}
-	
-	printf("\nYour Advanced Navigation ROS driver is currently running\nClose the Terminal window when done.\n");
-	
+	ros::NodeHandle pnh("~");
+
 	// Set up the COM port
-	char* com_port = argv[1];
-	int baud_rate = atoi(argv[2]);
+	std::string com_port;
+	int baud_rate;
+	std::string imu_frame_id;
+	std::string nav_sat_frame_id;
+	std::string topic_prefix;
+
+	if (argc >= 3) {
+		com_port = std::string(argv[1]);
+		baud_rate = atoi(argv[2]);
+	}
+	else {
+		pnh.param("port", com_port, std::string("/dev/ttyUSB0"));
+		pnh.param("baud_rate", baud_rate, 115200);
+	}
+
+	pnh.param("imu_frame_id", imu_frame_id, std::string("imu"));
+	pnh.param("nav_sat_frame_id", nav_sat_frame_id, std::string("gps"));
+	pnh.param("topic_prefix", topic_prefix, std::string("an_device"));
 
 	// Initialise Publishers and Topics //
-	ros::Publisher nav_sat_fix_pub=nh.advertise<sensor_msgs::NavSatFix>("an_device/NavSatFix",10);
-	ros::Publisher twist_pub=nh.advertise<geometry_msgs::Twist>("an_device/Twist",10);
-	ros::Publisher imu_pub=nh.advertise<sensor_msgs::Imu>("an_device/Imu",10);
-	ros::Publisher system_status_pub=nh.advertise<diagnostic_msgs::DiagnosticStatus>("an_device/SystemStatus",10);
-	ros::Publisher filter_status_pub=nh.advertise<diagnostic_msgs::DiagnosticStatus>("an_device/FilterStatus",10);
+	ros::Publisher nav_sat_fix_pub=nh.advertise<sensor_msgs::NavSatFix>(topic_prefix + "/NavSatFix",10);
+	ros::Publisher twist_pub=nh.advertise<geometry_msgs::Twist>(topic_prefix + "/Twist",10);
+	ros::Publisher imu_pub=nh.advertise<sensor_msgs::Imu>(topic_prefix + "/Imu",10);
+	ros::Publisher system_status_pub=nh.advertise<diagnostic_msgs::DiagnosticStatus>(topic_prefix + "/SystemStatus",10);
+	ros::Publisher filter_status_pub=nh.advertise<diagnostic_msgs::DiagnosticStatus>(topic_prefix + "/FilterStatus",10);
 
 	// Initialise messages
 	sensor_msgs::NavSatFix nav_sat_fix_msg;
 	nav_sat_fix_msg.header.stamp.sec=0;
 	nav_sat_fix_msg.header.stamp.nsec=0;
-	nav_sat_fix_msg.header.frame_id='0'; // fixed
+	nav_sat_fix_msg.header.frame_id='0';
 	nav_sat_fix_msg.status.status=0;
 	nav_sat_fix_msg.status.service=1; // fixed to GPS
 	nav_sat_fix_msg.latitude=0.0;
@@ -94,7 +102,7 @@ int main(int argc, char *argv[]) {
 	sensor_msgs::Imu imu_msg;
 	imu_msg.header.stamp.sec=0;
 	imu_msg.header.stamp.nsec=0;
-	imu_msg.header.frame_id='0'; // fixed
+	imu_msg.header.frame_id='0';
 	imu_msg.orientation.x=0.0;
 	imu_msg.orientation.y=0.0;
 	imu_msg.orientation.z=0.0;
@@ -108,27 +116,27 @@ int main(int argc, char *argv[]) {
 	imu_msg.linear_acceleration.y=0.0;
 	imu_msg.linear_acceleration.z=0.0;
 	imu_msg.linear_acceleration_covariance={0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0}; // fixed
-	
+
 	diagnostic_msgs::DiagnosticStatus system_status_msg;
 	system_status_msg.level = 0; // default OK state
 	system_status_msg.name = "System Status";
 	system_status_msg.message = "";
-	
+
 	diagnostic_msgs::DiagnosticStatus filter_status_msg;
 	filter_status_msg.level = 0; // default OK state
 	filter_status_msg.name = "Filter Status";
 	filter_status_msg.message = "";
-	
+
 	// get data from com port //
 	an_decoder_t an_decoder;
 	an_packet_t *an_packet;
 	system_state_packet_t system_state_packet;
 	quaternion_orientation_standard_deviation_packet_t quaternion_orientation_standard_deviation_packet;
 	int bytes_received;
-	
-	if (OpenComport(com_port, baud_rate))
+
+	if (OpenComport(const_cast<char*>(com_port.c_str()), baud_rate))
 	{
-		printf("Could not open serial port: %s \n",com_port);
+		printf("Could not open serial port: %s \n",com_port.c_str());
 		exit(EXIT_FAILURE);
 	}
 
@@ -142,18 +150,19 @@ int main(int argc, char *argv[]) {
 		{
 			// increment the decode buffer length by the number of bytes received //
 			an_decoder_increment(&an_decoder, bytes_received);
-			
+
 			// decode all the packets in the buffer //
 			while ((an_packet = an_packet_decode(&an_decoder)) != NULL)
 			{
 				// system state packet //
-				if (an_packet->id == packet_id_system_state) 
+				if (an_packet->id == packet_id_system_state)
 				{
 					if(decode_system_state_packet(&system_state_packet, an_packet) == 0)
-					{	
+					{
 						// NavSatFix
 						nav_sat_fix_msg.header.stamp.sec=system_state_packet.unix_time_seconds;
 						nav_sat_fix_msg.header.stamp.nsec=system_state_packet.microseconds*1000;
+						nav_sat_fix_msg.header.frame_id=nav_sat_frame_id;
 						if ((system_state_packet.filter_status.b.gnss_fix_type == 1) ||
 							(system_state_packet.filter_status.b.gnss_fix_type == 2))
 						{
@@ -170,7 +179,7 @@ int main(int argc, char *argv[]) {
 						{
 							nav_sat_fix_msg.status.status=2;
 						}
-						else 
+						else
 						{
 							nav_sat_fix_msg.status.status=-1;
 						}
@@ -180,7 +189,7 @@ int main(int argc, char *argv[]) {
 						nav_sat_fix_msg.position_covariance={pow(system_state_packet.standard_deviation[1],2), 0.0, 0.0,
 							0.0, pow(system_state_packet.standard_deviation[0],2), 0.0,
 							0.0, 0.0, pow(system_state_packet.standard_deviation[2],2)};
-	
+
 						// Twist
 						twist_msg.linear.x=system_state_packet.velocity[0];
 						twist_msg.linear.y=system_state_packet.velocity[1];
@@ -188,10 +197,11 @@ int main(int argc, char *argv[]) {
 						twist_msg.angular.x=system_state_packet.angular_velocity[0];
 						twist_msg.angular.y=system_state_packet.angular_velocity[1];
 						twist_msg.angular.z=system_state_packet.angular_velocity[2];
-						
+
 						// IMU
 						imu_msg.header.stamp.sec=system_state_packet.unix_time_seconds;
 						imu_msg.header.stamp.nsec=system_state_packet.microseconds*1000;
+						imu_msg.header.frame_id=imu_frame_id;
 						// Convert roll, pitch, yaw from radians to quaternion format //
 						float phi = system_state_packet.orientation[0] / 2.0f;
 						float theta = system_state_packet.orientation[1] / 2.0f;
@@ -201,20 +211,20 @@ int main(int argc, char *argv[]) {
 						float sin_theta = sinf(theta);
 						float cos_theta = cosf(theta);
 						float sin_psi = sinf(psi);
-						float cos_psi = cosf(psi);				
+						float cos_psi = cosf(psi);
 						imu_msg.orientation.x=-cos_phi * sin_theta * sin_psi + sin_phi * cos_theta * cos_psi;
 						imu_msg.orientation.y=cos_phi * sin_theta * cos_psi + sin_phi * cos_theta * sin_psi;
 						imu_msg.orientation.z=cos_phi * cos_theta * sin_psi - sin_phi * sin_theta * cos_psi;
 						imu_msg.orientation.w=cos_phi * cos_theta * cos_psi + sin_phi * sin_theta * sin_psi;
-						
+
 						imu_msg.angular_velocity.x=system_state_packet.angular_velocity[0]; // These the same as the TWIST msg values
 						imu_msg.angular_velocity.y=system_state_packet.angular_velocity[1];
 						imu_msg.angular_velocity.z=system_state_packet.angular_velocity[2];
 						imu_msg.linear_acceleration.x=system_state_packet.body_acceleration[0];
 						imu_msg.linear_acceleration.y=system_state_packet.body_acceleration[1];
 						imu_msg.linear_acceleration.z=system_state_packet.body_acceleration[2];
-						
-						// System Status	
+
+						// System Status
 						system_status_msg.message = "";
 						system_status_msg.level = 0; // default OK state
 						if (system_state_packet.system_status.b.system_failure) {
@@ -281,115 +291,115 @@ int main(int argc, char *argv[]) {
 							system_status_msg.level = 2; // ERROR state
 							system_status_msg.message = system_status_msg.message + "15. Data Output Overflow Alarm! ";
 						}
-						
+
 						// Filter Status
 						filter_status_msg.message = "";
 						filter_status_msg.level = 0; // default OK state
 						if (system_state_packet.filter_status.b.orientation_filter_initialised) {
-							filter_status_msg.message = filter_status_msg.message + "0. Orientation Filter Initialised. ";	
+							filter_status_msg.message = filter_status_msg.message + "0. Orientation Filter Initialised. ";
 						}
 						else {
 							filter_status_msg.level = 1; // WARN state
 							filter_status_msg.message = filter_status_msg.message + "0. Orientation Filter NOT Initialised. ";
 						}
 						if (system_state_packet.filter_status.b.ins_filter_initialised) {
-							filter_status_msg.message = filter_status_msg.message + "1. Navigation Filter Initialised. ";	
+							filter_status_msg.message = filter_status_msg.message + "1. Navigation Filter Initialised. ";
 						}
 						else {
 							filter_status_msg.level = 1; // WARN state
 							filter_status_msg.message = filter_status_msg.message + "1. Navigation Filter NOT Initialised. ";
 						}
 						if (system_state_packet.filter_status.b.heading_initialised) {
-							filter_status_msg.message = filter_status_msg.message + "2. Heading Initialised. ";	
+							filter_status_msg.message = filter_status_msg.message + "2. Heading Initialised. ";
 						}
 						else {
 							filter_status_msg.level = 1; // WARN state
 							filter_status_msg.message = filter_status_msg.message + "2. Heading NOT Initialised. ";
 						}
 						if (system_state_packet.filter_status.b.utc_time_initialised) {
-							filter_status_msg.message = filter_status_msg.message + "3. UTC Time Initialised. ";	
+							filter_status_msg.message = filter_status_msg.message + "3. UTC Time Initialised. ";
 						}
 						else {
 							filter_status_msg.level = 1; // WARN state
 							filter_status_msg.message = filter_status_msg.message + "3. UTC Time NOT Initialised. ";
-						}											
+						}
 						if (system_state_packet.filter_status.b.event1_flag) {
 							filter_status_msg.level = 1; // WARN state
-							filter_status_msg.message = filter_status_msg.message + "7. Event 1 Occured. ";	
+							filter_status_msg.message = filter_status_msg.message + "7. Event 1 Occured. ";
 						}
-						else {							
+						else {
 							filter_status_msg.message = filter_status_msg.message + "7. Event 1 NOT Occured. ";
 						}
 						if (system_state_packet.filter_status.b.event2_flag) {
 							filter_status_msg.level = 1; // WARN state
-							filter_status_msg.message = filter_status_msg.message + "8. Event 2 Occured. ";	
+							filter_status_msg.message = filter_status_msg.message + "8. Event 2 Occured. ";
 						}
 						else {
 							filter_status_msg.message = filter_status_msg.message + "8. Event 2 NOT Occured. ";
 						}
 						if (system_state_packet.filter_status.b.internal_gnss_enabled) {
-							filter_status_msg.message = filter_status_msg.message + "9. Internal GNSS Enabled. ";	
+							filter_status_msg.message = filter_status_msg.message + "9. Internal GNSS Enabled. ";
 						}
 						else {
 							filter_status_msg.level = 1; // WARN state
 							filter_status_msg.message = filter_status_msg.message + "9. Internal GNSS NOT Enabled. ";
 						}
 						if (system_state_packet.filter_status.b.magnetic_heading_enabled) {
-							filter_status_msg.message = filter_status_msg.message + "10. Magnetic Heading Active. ";	
+							filter_status_msg.message = filter_status_msg.message + "10. Magnetic Heading Active. ";
 						}
 						else {
 							filter_status_msg.level = 1; // WARN state
 							filter_status_msg.message = filter_status_msg.message + "10. Magnetic Heading NOT Active. ";
-						}											
-						if (system_state_packet.filter_status.b.velocity_heading_enabled) {							
-							filter_status_msg.message = filter_status_msg.message + "11. Velocity Heading Enabled. ";	
 						}
-						else {							
+						if (system_state_packet.filter_status.b.velocity_heading_enabled) {
+							filter_status_msg.message = filter_status_msg.message + "11. Velocity Heading Enabled. ";
+						}
+						else {
 							filter_status_msg.level = 1; // WARN state
 							filter_status_msg.message = filter_status_msg.message + "11. Velocity Heading NOT Enabled. ";
 						}
 						if (system_state_packet.filter_status.b.atmospheric_altitude_enabled) {
-							filter_status_msg.message = filter_status_msg.message + "12. Atmospheric Altitude Enabled. ";	
+							filter_status_msg.message = filter_status_msg.message + "12. Atmospheric Altitude Enabled. ";
 						}
 						else {
 							filter_status_msg.message = filter_status_msg.message + "12. Atmospheric Altitude NOT Enabled. ";
 							filter_status_msg.level = 1; // WARN state
 						}
 						if (system_state_packet.filter_status.b.external_position_active) {
-							filter_status_msg.message = filter_status_msg.message + "13. External Position Active. ";	
+							filter_status_msg.message = filter_status_msg.message + "13. External Position Active. ";
 						}
 						else {
 							filter_status_msg.level = 1; // WARN state
 							filter_status_msg.message = filter_status_msg.message + "13. External Position NOT Active. ";
 						}
 						if (system_state_packet.filter_status.b.external_velocity_active) {
-							filter_status_msg.message = filter_status_msg.message + "14. External Velocity Active. ";	
+							filter_status_msg.message = filter_status_msg.message + "14. External Velocity Active. ";
 						}
 						else {
 							filter_status_msg.level = 1; // WARN state
 							filter_status_msg.message = filter_status_msg.message + "14. External Velocity NOT Active. ";
-						}											
-						if (system_state_packet.filter_status.b.external_heading_active) {
-							filter_status_msg.message = filter_status_msg.message + "15. External Heading Active. ";	
 						}
-						else {							
+						if (system_state_packet.filter_status.b.external_heading_active) {
+							filter_status_msg.message = filter_status_msg.message + "15. External Heading Active. ";
+						}
+						else {
 							filter_status_msg.level = 1; // WARN state
 							filter_status_msg.message = filter_status_msg.message + "15. External Heading NOT Active. ";
-						}	
+						}
 					}
 				}
-				
+
 				// quaternion orientation standard deviation packet //
-				if (an_packet->id == packet_id_quaternion_orientation_standard_deviation) 
+				if (an_packet->id == packet_id_quaternion_orientation_standard_deviation)
 				{
 					// copy all the binary data into the typedef struct for the packet //
 					// this allows easy access to all the different values             //
 					if(decode_quaternion_orientation_standard_deviation_packet(&quaternion_orientation_standard_deviation_packet, an_packet) == 0)
-					{	
+					{
 						// IMU
 						imu_msg.orientation_covariance[0] = quaternion_orientation_standard_deviation_packet.standard_deviation[0];
 						imu_msg.orientation_covariance[4] = quaternion_orientation_standard_deviation_packet.standard_deviation[1];
-						imu_msg.orientation_covariance[8] = quaternion_orientation_standard_deviation_packet.standard_deviation[2];						
+						imu_msg.orientation_covariance[8] = quaternion_orientation_standard_deviation_packet.standard_deviation[2];
 					}
 				}
 				// Ensure that you free the an_packet when your done with it //
@@ -407,9 +417,4 @@ int main(int argc, char *argv[]) {
 	}
 
 }
-
-
-
-	
-	
 
