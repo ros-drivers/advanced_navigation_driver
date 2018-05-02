@@ -50,6 +50,8 @@ int main(int argc, char *argv[]) {
 	ros::init(argc, argv, "an_device_node");
 	ros::NodeHandle nh;
 	ros::NodeHandle pnh("~");
+	
+	printf("\nYour Advanced Navigation ROS driver is currently running\nPress Ctrl-C to interrupt\n");
 
 	// Set up the COM port
 	std::string com_port;
