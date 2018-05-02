@@ -135,8 +135,9 @@ int main(int argc, char *argv[]) {
 	an_decoder_initialise(&an_decoder);
 
 	// Loop continuously, polling for packets
-	while (1)
+	while (ros::ok())
 	{
+		ros::spinOnce();
 		if ((bytes_received = PollComport(an_decoder_pointer(&an_decoder), an_decoder_size(&an_decoder))) > 0)
 		{
 			// increment the decode buffer length by the number of bytes received //
