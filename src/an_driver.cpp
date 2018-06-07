@@ -59,6 +59,7 @@ int main(int argc, char *argv[]) {
 	std::string imu_frame_id;
 	std::string nav_sat_frame_id;
 	std::string topic_prefix;
+    bool device_time;
 
 	if (argc >= 3) {
 		com_port = std::string(argv[1]);
@@ -72,6 +73,7 @@ int main(int argc, char *argv[]) {
 	pnh.param("imu_frame_id", imu_frame_id, std::string("imu"));
 	pnh.param("nav_sat_frame_id", nav_sat_frame_id, std::string("gps"));
 	pnh.param("topic_prefix", topic_prefix, std::string("an_device"));
+    pnh.param("device_time", device_time, false);
 
 	// Initialise Publishers and Topics //
 	ros::Publisher nav_sat_fix_pub=nh.advertise<sensor_msgs::NavSatFix>(topic_prefix + "/NavSatFix",10);
@@ -161,6 +163,13 @@ int main(int argc, char *argv[]) {
 				{
 					if(decode_system_state_packet(&system_state_packet, an_packet) == 0)
 					{
+                        if(!device_time)
+                        {
+                            ros::Time ros_time = ros::Time::now();
+                            system_state_packet.unix_time_seconds = ros_time.sec;
+                            system_state_packet.microseconds      = ros_time.nsec/1000;
+                        }
+                        
 						// NavSatFix
 						nav_sat_fix_msg.header.stamp.sec=system_state_packet.unix_time_seconds;
 						nav_sat_fix_msg.header.stamp.nsec=system_state_packet.microseconds*1000;
