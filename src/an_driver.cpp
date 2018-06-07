@@ -136,6 +136,7 @@ int main(int argc, char *argv[]) {
 	an_packet_t *an_packet;
 	system_state_packet_t system_state_packet;
 	quaternion_orientation_standard_deviation_packet_t quaternion_orientation_standard_deviation_packet;
+    raw_sensors_packet_t raw_sensors_packet;
 	int bytes_received;
 
 	if (OpenComport(const_cast<char*>(com_port.c_str()), baud_rate))
@@ -231,9 +232,9 @@ int main(int argc, char *argv[]) {
 						imu_msg.angular_velocity.x=system_state_packet.angular_velocity[0]; // These the same as the TWIST msg values
 						imu_msg.angular_velocity.y=system_state_packet.angular_velocity[1];
 						imu_msg.angular_velocity.z=system_state_packet.angular_velocity[2];
-						imu_msg.linear_acceleration.x=system_state_packet.body_acceleration[0];
-						imu_msg.linear_acceleration.y=system_state_packet.body_acceleration[1];
-						imu_msg.linear_acceleration.z=system_state_packet.body_acceleration[2];
+						//imu_msg.linear_acceleration.x=system_state_packet.body_acceleration[0];
+						//imu_msg.linear_acceleration.y=system_state_packet.body_acceleration[1];
+						//imu_msg.linear_acceleration.z=system_state_packet.body_acceleration[2];
 
 						// System Status
 						system_status_msg.message = "";
@@ -413,6 +414,21 @@ int main(int argc, char *argv[]) {
 						imu_msg.orientation_covariance[8] = quaternion_orientation_standard_deviation_packet.standard_deviation[2];
 					}
 				}
+
+				// fix imu acceleration //
+				if (an_packet->id == packet_id_raw_sensors)
+				{
+					// copy all the binary data into the typedef struct for the packet //
+					// this allows easy access to all the different values             //
+					if(decode_raw_sensors_packet(&raw_sensors_packet, an_packet) == 0)
+					{
+						// IMU
+						imu_msg.linear_acceleration.x = raw_sensors_packet.accelerometers[0];
+						imu_msg.linear_acceleration.y = raw_sensors_packet.accelerometers[1];
+						imu_msg.linear_acceleration.z = raw_sensors_packet.accelerometers[2];
+					}
+				}
+
 				// Ensure that you free the an_packet when your done with it //
 				// or you will leak memory                                   //
 				an_packet_free(&an_packet);
