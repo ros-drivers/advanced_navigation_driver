@@ -101,7 +101,7 @@ int OpenComport(char *comport, int baudrate)
                    break;
   }
 
-  Cport = open(comport, O_RDWR | O_NOCTTY | O_NDELAY);
+  Cport = open(comport, O_RDWR | O_NOCTTY); //non blocking by removing  '| O_NDELAY'
   if(Cport==-1)
   {
     perror("unable to open comport ");
@@ -122,7 +122,7 @@ int OpenComport(char *comport, int baudrate)
   new_port_settings.c_oflag = 0;
   new_port_settings.c_lflag = 0;
   new_port_settings.c_cc[VMIN] = 0;      /* block untill n bytes are received */
-  new_port_settings.c_cc[VTIME] = 0;     /* block untill a timer expires (n * 100 mSec.) */
+  new_port_settings.c_cc[VTIME] = 1;     /* block untill a timer expires (n * 100 mSec.) */
   error = tcsetattr(Cport, TCSANOW, &new_port_settings);
   if(error==-1)
   {
