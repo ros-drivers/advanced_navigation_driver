@@ -27,6 +27,8 @@
  */
 
 #include <ros/ros.h>
+#include <tf/transform_broadcaster.h>
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
@@ -44,6 +46,8 @@
 #include <diagnostic_msgs/DiagnosticArray.h>
 
 #define RADIANS_TO_DEGREES (180.0/M_PI)
+const double PI = 4*atan(1);
+
 
 int main(int argc, char *argv[]) {
 	// Set up ROS node //
@@ -60,6 +64,7 @@ int main(int argc, char *argv[]) {
 	std::string nav_sat_frame_id;
 	std::string topic_prefix;
     bool device_time, remove_gravity;
+    tf::Quaternion orientation;
 
 	if (argc >= 3) {
 		com_port = std::string(argv[1]);
@@ -218,19 +223,15 @@ int main(int argc, char *argv[]) {
 						imu_msg.header.stamp.nsec=system_state_packet.microseconds*1000;
 						imu_msg.header.frame_id=imu_frame_id;
 						// Convert roll, pitch, yaw from radians to quaternion format //
-						float phi = system_state_packet.orientation[0] / 2.0f;
-						float theta = system_state_packet.orientation[1] / 2.0f;
-						float psi = system_state_packet.orientation[2] / 2.0f;
-						float sin_phi = sinf(phi);
-						float cos_phi = cosf(phi);
-						float sin_theta = sinf(theta);
-						float cos_theta = cosf(theta);
-						float sin_psi = sinf(psi);
-						float cos_psi = cosf(psi);
-						imu_msg.orientation.x=-cos_phi * sin_theta * sin_psi + sin_phi * cos_theta * cos_psi;
-						imu_msg.orientation.y=cos_phi * sin_theta * cos_psi + sin_phi * cos_theta * sin_psi;
-						imu_msg.orientation.z=cos_phi * cos_theta * sin_psi - sin_phi * sin_theta * cos_psi;
-						imu_msg.orientation.w=cos_phi * cos_theta * cos_psi + sin_phi * sin_theta * sin_psi;
+						orientation.setRPY(
+							system_state_packet.orientation[0],
+							system_state_packet.orientation[1],
+							PI / 2.0f - system_state_packet.orientation[2] // REP 103
+						);
+						imu_msg.orientation.x = orientation[0];
+						imu_msg.orientation.y = orientation[1];
+						imu_msg.orientation.z = orientation[2];
+						imu_msg.orientation.w = orientation[3];
 
                         if(remove_gravity)
                         {
