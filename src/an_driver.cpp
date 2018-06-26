@@ -56,6 +56,7 @@ int main(int argc, char *argv[]) {
 	// Set up the COM port
 	std::string com_port;
 	int baud_rate;
+	int loop_rate;
 	std::string imu_frame_id;
 	std::string nav_sat_frame_id;
 	std::string topic_prefix;
@@ -63,10 +64,12 @@ int main(int argc, char *argv[]) {
 	if (argc >= 3) {
 		com_port = std::string(argv[1]);
 		baud_rate = atoi(argv[2]);
+		loop_rate = atoi(argv[3]);
 	}
 	else {
 		pnh.param("port", com_port, std::string("/dev/ttyUSB0"));
 		pnh.param("baud_rate", baud_rate, 115200);
+		pnh.param("loop_rate", loop_rate, 100);
 	}
 
 	pnh.param("imu_frame_id", imu_frame_id, std::string("imu"));
@@ -143,6 +146,8 @@ int main(int argc, char *argv[]) {
 	}
 
 	an_decoder_initialise(&an_decoder);
+
+	ros::Rate loop(loop_rate);
 
 	// Loop continuously, polling for packets
 	while (ros::ok())
@@ -416,6 +421,8 @@ int main(int argc, char *argv[]) {
 				filter_status_pub.publish(filter_status_msg);
 			}
 		}
+
+		loop_rate.sleep();
 	}
 
 }
