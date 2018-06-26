@@ -133,6 +133,7 @@ int main(int argc, char *argv[]) {
 	an_decoder_t an_decoder;
 	an_packet_t *an_packet;
 	system_state_packet_t system_state_packet;
+	quaternion_orientation_packet_t quaternion_orientation_packet;
 	quaternion_orientation_standard_deviation_packet_t quaternion_orientation_standard_deviation_packet;
 	int bytes_received;
 
@@ -204,20 +205,15 @@ int main(int argc, char *argv[]) {
 						imu_msg.header.stamp.sec=system_state_packet.unix_time_seconds;
 						imu_msg.header.stamp.nsec=system_state_packet.microseconds*1000;
 						imu_msg.header.frame_id=imu_frame_id;
-						// Convert roll, pitch, yaw from radians to quaternion format //
-						float phi = system_state_packet.orientation[0] / 2.0f;
-						float theta = system_state_packet.orientation[1] / 2.0f;
-						float psi = system_state_packet.orientation[2] / 2.0f;
-						float sin_phi = sinf(phi);
-						float cos_phi = cosf(phi);
-						float sin_theta = sinf(theta);
-						float cos_theta = cosf(theta);
-						float sin_psi = sinf(psi);
-						float cos_psi = cosf(psi);
-						imu_msg.orientation.x=-cos_phi * sin_theta * sin_psi + sin_phi * cos_theta * cos_psi;
-						imu_msg.orientation.y=cos_phi * sin_theta * cos_psi + sin_phi * cos_theta * sin_psi;
-						imu_msg.orientation.z=cos_phi * cos_theta * sin_psi - sin_phi * sin_theta * cos_psi;
-						imu_msg.orientation.w=cos_phi * cos_theta * cos_psi + sin_phi * sin_theta * sin_psi;
+
+						if (an_packet->id == packet_id_quaternion_orientation) {
+							if (decode_quaternion_orientation_packet(&quaternion_orientation_packet, an_packet) == 0) {
+								imu_msg.orientation.x = quaternion_orientation_packet.orientation[1]; // the packet is stored as s, x, y, z
+								imu_msg.orientation.y = quaternion_orientation_packet.orientation[2];
+								imu_msg.orientation.z = quaternion_orientation_packet.orientation[3];
+								imu_msg.orientation.w = quaternion_orientation_packet.orientation[0];
+							}
+						}
 
 						imu_msg.angular_velocity.x=system_state_packet.angular_velocity[0]; // These the same as the TWIST msg values
 						imu_msg.angular_velocity.y=system_state_packet.angular_velocity[1];
