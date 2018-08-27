@@ -42,7 +42,7 @@ ROS driver build instructions from: http://www.clearpathrobotics.com/assets/guid
 /*********************************************/
 /*           Device Configuration            */
 /*********************************************/
-To use this example code, your Advanced Navigation device should be configured to output anpp packets #20 and #27.
+To use this example code, your Advanced Navigation device should be already configured to output anpp packets #20 and #27.
 
 
 /*********************************************/

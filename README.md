@@ -5,7 +5,7 @@ Packet to Published Message Example
 
 Copyright 2017, Advanced Navigation
 
-This is an example using the Advanced Navigation Spatial SDK to create a ROS driver that reads and decodes the anpp packets (in this case packet #20 and packet #27) and publishes the information as ROS topics / messages. 
+This is an example using the Advanced Navigation Spatial SDK to create a ROS driver that reads and decodes the anpp packets (in this case packet #20, #27, #36 and #40) and publishes the information as ROS topics / messages.
 
 It should work on all Advanced Navigation INS devices.
 
